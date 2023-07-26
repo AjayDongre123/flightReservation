@@ -3,10 +3,7 @@ package com.airline.reservation.service;
 import com.airline.reservation.entity.Flight;
 import com.airline.reservation.entity.FlightBooking;
 import com.airline.reservation.entity.Passenger;
-import com.airline.reservation.model.FlightBookingListResponse;
-import com.airline.reservation.model.FlightBookingObjectResponse;
-import com.airline.reservation.model.FlightListResponse;
-import com.airline.reservation.model.MessageResponse;
+import com.airline.reservation.model.*;
 import com.airline.reservation.repository.FlightBookingRepository;
 import com.airline.reservation.repository.FlightRepository;
 import com.airline.reservation.repository.PassengerRepository;
@@ -15,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -36,7 +34,6 @@ public class FlightBookingService {
                     flightBooking.setFirstName(passenger.getFirstName());
                     flightBooking.setLastName(passenger.getLastName());
                     Flight flight = flightRepository.findById(flightId).get();
-
                     flightBooking.setFlightId(flightId);
                     flightBooking.setFlightName(flight.getFlightName());
                     flightBooking.setSource(flight.getSource());
@@ -44,22 +41,29 @@ public class FlightBookingService {
                     flightBooking.setDepartureTime(flight.getDepartureTime());
                     flightBooking.setArrivalTime(flight.getArrivalTime());
                     flightBooking.setFare(flight.getFare());
-                    List<FlightBooking> all = flightBookingRepository.findAll();
-                    if (!all.isEmpty()) {
-                        int maxBookSeats = flightBookingRepository.getMaxBookSeats();
-                        System.out.println("Before if < 60......." + flight.getTotalSeats());
-                        if (maxBookSeats < flight.getTotalSeats()) {
-                            System.out.println("-----------Inside <60..... " + flightBooking.getBookSeats());
-                            flightBooking.setBookSeats(maxBookSeats + 1);
+                    if (flightBookingRepository.existsByFlightId(flightId)) {
+                        int lastBookedSeat = flightBookingRepository.getLastBookedSeats(flightId);
+                        if (lastBookedSeat < flight.getTotalSeats()) {
+                            flightBooking.setBookSeats(lastBookedSeat + 1);
                             flightBookingRepository.save(flightBooking);
+                            List<FlightBooking> byFlightId = flightBookingRepository.findByFlightId(flightId);
+                            int totalSeats = byFlightId.size();
+                            flight.setBookseats(totalSeats);
+                            flightRepository.save(flight);
+
                             return new ResponseEntity(new MessageResponse(true, "createFlightBooking Successfully"), HttpStatus.OK);
                         } else {
                             return new ResponseEntity(new MessageResponse(false, "there is no seats for booking"), HttpStatus.NOT_FOUND);
                         }
                     } else {
-                        flightBooking.setBookSeats(1);
-                        flightBookingRepository.save(flightBooking);
-                        return new ResponseEntity(new MessageResponse(true, "createFlightBooking successfully"), HttpStatus.OK);
+                        int lastBookedSeat = 0;
+                        if (lastBookedSeat < flight.getTotalSeats()) {
+                            flightBooking.setBookSeats(lastBookedSeat + 1);
+                            flightBookingRepository.save(flightBooking);
+                            return new ResponseEntity(new MessageResponse(true, "createFlightBooking successfully"), HttpStatus.OK);
+                        } else {
+                            return new ResponseEntity(new MessageResponse(false, "there is no seats for booking"), HttpStatus.NOT_FOUND);
+                        }
                     }
                 } else {
                     return new ResponseEntity(new MessageResponse(false, "Passenger already booked flight...!"), HttpStatus.CONFLICT);
@@ -67,20 +71,21 @@ public class FlightBookingService {
             } else {
                 return new ResponseEntity(new MessageResponse(false, "flightId doesn't exist"), HttpStatus.NOT_FOUND);
             }
+        } else {
+            return new ResponseEntity(new MessageResponse(false, "PassengerId doesn't exist"), HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<>(new MessageResponse(false, "passenger doesn't exist"), HttpStatus.NOT_ACCEPTABLE);
     }
 
     public ResponseEntity updateFlightBooking(long oldFlightId, long newFlightId) {
         if (flightRepository.existsById(oldFlightId)) {
-            if(flightRepository.existsById(newFlightId)) {
+            if (flightRepository.existsById(newFlightId)) {
                 Flight flight = flightRepository.findById(newFlightId).get();
                 List<FlightBooking> byFlightId = flightBookingRepository.findByFlightId(oldFlightId);
                 String flightName = flight.getFlightName();
                 String arrivalTime = flight.getArrivalTime();
                 String departureTime = flight.getDepartureTime();
                 String destination = flight.getDestination();
-                for(FlightBooking flightBooking : byFlightId){
+                for (FlightBooking flightBooking : byFlightId) {
                     flightBooking.setFlightName(flightName);
                     flightBooking.setFlightId(newFlightId);
                     flightBooking.setArrivalTime(arrivalTime);
@@ -89,10 +94,10 @@ public class FlightBookingService {
                     flightBookingRepository.save(flightBooking);
                 }
                 return new ResponseEntity(new MessageResponse(true, "Successfully Updated flight"), HttpStatus.OK);
-            }else{
+            } else {
                 return null;
             }
-        }else {
+        } else {
             return new ResponseEntity(new MessageResponse(false, "passengerId not exist!!!"), HttpStatus.NOT_FOUND);
         }
     }
@@ -116,12 +121,54 @@ public class FlightBookingService {
     public ResponseEntity getAllFlightBooking() {
         List<FlightBooking> allflightBooking = flightBookingRepository.findAll();
         if (!allflightBooking.isEmpty()) {
-            return new ResponseEntity(new FlightBookingListResponse(true, "Successfully get All Data!!", allflightBooking)
-                    , HttpStatus.OK);
+            return new ResponseEntity(new FlightBookingListResponse(true, "Successfully get All Data!!", allflightBooking), HttpStatus.OK);
         }
         return new ResponseEntity(new MessageResponse(false, "Not found Data"), HttpStatus.NOT_FOUND);
     }
+
+    public ResponseEntity getAllBookingList() {
+        List<Flight> getAllFlights = flightRepository.findAll();
+        List<GetFlightDetailsWithPassengerResponse> flightDetailsWithPassengerResponses = new ArrayList<>();
+        for (Flight flight : getAllFlights) {
+            Flight flightData = flightRepository.findById(flight.getFlightId()).get();
+            String flightName = flightData.getFlightName();
+            String source = flightData.getSource();
+            int bookedSeats = flightData.getTotalSeats();//
+            int totalSeats = flightData.getTotalSeats();//only get total seats
+            int remainingSeats = totalSeats - bookedSeats;
+            List<FlightBooking> bookingDetails = flightBookingRepository.findByFlightId(flight.getFlightId());
+            if (!bookingDetails.isEmpty()) {
+                GetFlightDetailsWithPassengerResponse getFlightDetailsWithPassengerResponse = new GetFlightDetailsWithPassengerResponse(flight.getFlightId(), flightName, source, bookedSeats, remainingSeats, bookingDetails);
+                flightDetailsWithPassengerResponses.add(getFlightDetailsWithPassengerResponse);
+            }
+        }
+        return new ResponseEntity(new MessageResponseOfPassengerList(true, "successfully", flightDetailsWithPassengerResponses), HttpStatus.OK);
+    }
 }
+//            FlightBooking flightBooking = flightBookingRepository.findById(flightId).get();
+//            flightBooking.getFlightId();
+//            flightBooking.getFlightName();
+//            flightBooking.getSource();
+//            Flight flight = flightRepository.findById(flightId).get();
+//            int totalSeats = flight.getTotalSeats();
+//            int bookedSeats = flight.getBookedSeats();
+//            int remainingSeats = totalSeats-bookedSeats;
+
+//            List<Passenger> byFlightId = passengerRepository.findByFlightId(flightId);
+//            for (Passenger passenger : byFlightId) {
+//                passenger.getPassengerId();
+//                passenger.getFirstName();
+//                passenger.getLastName();
+//                passenger.getGender();
+//                passenger.getAge();
+//                GetFlightDetailsWithPassengerResponse getFlightDetailsWithPassengerResponse = new GetFlightDetailsWithPassengerResponse(flightId,,remainingSeats);
+//
+//            }
+//        } else {
+//            return new ResponseEntity(new MessageResponse(false, "not get data"), HttpStatus.NOT_FOUND);
+//        }
+
+
 
 
 

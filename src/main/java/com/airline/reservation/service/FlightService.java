@@ -28,12 +28,12 @@ public class FlightService {
         }
         flight.setFlightName(flightName);
         flight.setSource(source);
-        flight.setDestination(source+"-"+destination);
+        flight.setDestination(source + "-" + destination);
         flight.setDepartureTime(departureTime);
         flight.setArrivalTime(arrivalTime);
         flight.setFare(fare);
-        flight.setCancelFlight(false);
         flight.setTotalSeats(60);
+        flight.setBookseats(0);
         flightRepository.save(flight);
         return new ResponseEntity(new MessageResponse(true, "Successfully added flight"), HttpStatus.OK);
     }
@@ -61,21 +61,23 @@ public class FlightService {
         }
         return new ResponseEntity(new MessageResponse(false, "flightId not Exist!!!"), HttpStatus.NOT_FOUND);
     }
-    public ResponseEntity getByFlightId(long flightId){
+
+    public ResponseEntity getByFlightId(long flightId) {
         if (flightRepository.existsById(flightId)) {
             Flight flight = flightRepository.findById(flightId).get();
-            return new ResponseEntity(new FlightObjectResponse(true, "Successfully get data",flight), HttpStatus.OK);
+            return new ResponseEntity(new FlightObjectResponse(true, "Successfully get data", flight), HttpStatus.OK);
         }
         return new ResponseEntity(new MessageResponse(false, "flightId not Exist!!!"), HttpStatus.NOT_FOUND);
     }
-    public ResponseEntity getAllFlight(){
+
+    public ResponseEntity getAllFlight() {
         List<Flight> allflight = flightRepository.findAll();
-        if(!allflight.isEmpty()){
-            return new ResponseEntity(new FlightListResponse(true,"Successfully get All Data!!",allflight)
-                    ,HttpStatus.OK);
+        if (!allflight.isEmpty()) {
+            return new ResponseEntity(new FlightListResponse(true, "Successfully get All Data!!", allflight)
+                    , HttpStatus.OK);
         }
-        return new ResponseEntity (new MessageResponse(false,"Not found Data"),HttpStatus.NOT_FOUND);
+        return new ResponseEntity(new MessageResponse(false, "Not found Data"), HttpStatus.NOT_FOUND);
     }
-    }
+}
 
 

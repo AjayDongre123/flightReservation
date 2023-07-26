@@ -19,4 +19,5 @@ public class Flight {
     private long fare;
     private boolean cancelFlight;
     private  int totalSeats;
+    private int bookseats;
 }

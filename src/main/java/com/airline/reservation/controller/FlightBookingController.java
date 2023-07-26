@@ -18,7 +18,8 @@ public class FlightBookingController {
     }
 
     @PutMapping("/updateFlightBooking")
-    public ResponseEntity updateFlightBooking(@RequestParam(name = "oldFlightId") long oldFlightId,@RequestParam(name = "newFlightId") long newFlightId) {
+    public ResponseEntity updateFlightBooking(@RequestParam(name = "oldFlightId") long oldFlightId,
+                                              @RequestParam(name = "newFlightId") long newFlightId) {
         return flightBookingService.updateFlightBooking(oldFlightId, newFlightId);
     }
 
@@ -28,7 +29,7 @@ public class FlightBookingController {
     }
 
     @GetMapping("/getByFlightBookingId")
-    public ResponseEntity getByFlightBookingId(@RequestParam(name = "bookingId") Long bookingId){
+    public ResponseEntity getByFlightBookingId(@RequestParam(name = "bookingId") Long bookingId) {
         return flightBookingService.getByFlightBookingId(bookingId);
     }
 
@@ -36,6 +37,13 @@ public class FlightBookingController {
     public ResponseEntity getAllFlightBooking() {
         return flightBookingService.getAllFlightBooking();
     }
+
+    @GetMapping("/getAllBookingList")
+    public ResponseEntity getAllBookingList() {
+        return flightBookingService.getAllBookingList();
+    }
+
 }
+
 
 
